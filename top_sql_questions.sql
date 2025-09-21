@@ -1,8 +1,10 @@
 ------------------------------------------------------
--- Top 25 SQL Interview Questions (Data Analyst Focus)
--- Fixed for schema + with expected output descriptions
+--(Data Analyst Focus)
 ------------------------------------------------------
-
+-- Top 25 SQL Interview Questions (Week 1 – Fundamentals)
+-- SELECT, INSERT, UPDATE, DELETE, Filtering, Sorting,
+-- Joins (Basics), GROUP BY, Aggregates, Basic Reporting
+------------------------------------------------------
 
 -- 1. Retrieve unique departments
 SELECT DISTINCT department_id FROM employees;
@@ -204,3 +206,187 @@ JOIN products p ON o.product_id = p.id
 GROUP BY YEAR(order_date)
 ORDER BY year;
 -- Output: Revenue per year, previous year revenue, and YoY % growth.
+
+------------------------------------------------------
+-- Top 25 SQL Interview Questions (Week 2 – Intermediate)
+-- DISTINCT, UNION/INTERSECT/EXCEPT, Advanced Joins, CASE, Subqueries,
+-- CTEs, Views, Indexing, Aggregations, Reporting
+------------------------------------------------------
+
+-- 1. Retrieve distinct customer cities
+SELECT DISTINCT city FROM customers;
+-- Output: List of unique cities where customers are located.
+
+-- 2. Combine employee and customer names (no duplicates)
+SELECT name FROM employees
+UNION
+SELECT name FROM customers;
+-- Output: All names from employees and customers (unique).
+
+-- 3. Combine employee and customer names (with duplicates)
+SELECT name FROM employees
+UNION ALL
+SELECT name FROM customers;
+-- Output: All names from both tables (duplicates included).
+
+-- 4. Employees with their managers (self-join)
+SELECT e.name AS employee, m.name AS manager
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.id;
+-- Output: Employees with their managers (NULL if none).
+
+-- 5. Employees with department names
+SELECT e.name, d.name AS department
+FROM employees e
+JOIN departments d ON e.department_id = d.id;
+-- Output: Employee names and their department.
+
+-- 6. Employees categorized by salary
+SELECT name, salary,
+       CASE
+         WHEN salary >= 75000 THEN 'High'
+         WHEN salary BETWEEN 60000 AND 74999 THEN 'Medium'
+         ELSE 'Low'
+       END AS salary_category
+FROM employees;
+-- Output: Each employee with a salary category.
+
+-- 7. Handle missing emails with IFNULL
+SELECT name, IFNULL(email, 'Not Provided') AS email
+FROM employees;
+-- Output: Employee names with email (or 'Not Provided').
+
+-- 8. Departments with at least 2 employees
+SELECT department_id, COUNT(*) AS emp_count
+FROM employees
+GROUP BY department_id
+HAVING COUNT(*) >= 2;
+-- Output: Departments that have 2 or more employees.
+
+-- 9. Employees earning above average salary
+SELECT name, salary
+FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
+-- Output: Employees earning more than the average salary.
+
+-- 10. 2nd highest salary
+SELECT MAX(salary) AS second_highest_salary
+FROM employees
+WHERE salary < (SELECT MAX(salary) FROM employees);
+-- Output: The second highest salary in employees.
+
+-- 11. Orders with total value using subquery
+SELECT o.id,
+       (SELECT SUM(p.price * o2.quantity)
+        FROM orders o2
+        JOIN products p ON o2.product_id = p.id
+        WHERE o2.id = o.id) AS total_value
+FROM orders o;
+-- Output: Each order with its total value.
+
+-- 12. Monthly sales summary (CTE)
+WITH monthly_sales AS (
+    SELECT DATE_FORMAT(order_date, '%Y-%m') AS month,
+           SUM(p.price * o.quantity) AS revenue
+    FROM orders o
+    JOIN products p ON o.product_id = p.id
+    GROUP BY DATE_FORMAT(order_date, '%Y-%m')
+)
+SELECT * FROM monthly_sales;
+-- Output: Month and revenue for each month.
+
+-- 13. Employees with department info (CTE)
+WITH emp_dept AS (
+    SELECT e.id, e.name, d.name AS department
+    FROM employees e
+    JOIN departments d ON e.department_id = d.id
+)
+SELECT * FROM emp_dept;
+-- Output: Employees with their department names.
+
+-- 14. Create view: daily sales report
+CREATE OR REPLACE VIEW daily_sales AS
+SELECT o.order_date, SUM(p.price * o.quantity) AS total_sales
+FROM orders o
+JOIN products p ON o.product_id = p.id
+GROUP BY o.order_date;
+-- Output: View created showing sales per day.
+
+-- 15. Query daily sales view
+SELECT * FROM daily_sales;
+-- Output: Each day with its total sales.
+
+-- 16. Drop daily_sales view
+DROP VIEW IF EXISTS daily_sales;
+-- Output: daily_sales view removed if exists.
+
+-- 17. Add index on customer_id in orders
+CREATE INDEX idx_customer_id ON orders(customer_id);
+-- Output: Index created on customer_id column.
+
+-- 18. Add index on product_id in orders
+CREATE INDEX idx_product_id ON orders(product_id);
+-- Output: Index created on product_id column.
+
+-- 19. Daily KPIs – total revenue per day
+SELECT o.order_date, SUM(p.price * o.quantity) AS daily_revenue
+FROM orders o
+JOIN products p ON o.product_id = p.id
+GROUP BY o.order_date
+ORDER BY o.order_date;
+-- Output: Each day with revenue generated.
+
+-- 20. Monthly KPIs – revenue trend
+SELECT DATE_FORMAT(o.order_date, '%Y-%m') AS month,
+       SUM(p.price * o.quantity) AS monthly_revenue
+FROM orders o
+JOIN products p ON o.product_id = p.id
+GROUP BY month
+ORDER BY month;
+-- Output: Monthly revenue across all orders.
+
+-- 21. Top 3 customers by spending
+SELECT c.name, SUM(p.price * o.quantity) AS total_spent
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+JOIN products p ON o.product_id = p.id
+GROUP BY c.name
+ORDER BY total_spent DESC
+LIMIT 3;
+-- Output: Top 3 customers by total money spent.
+
+-- 22. Top 3 products by revenue
+SELECT p.name, SUM(p.price * o.quantity) AS total_revenue
+FROM orders o
+JOIN products p ON o.product_id = p.id
+GROUP BY p.name
+ORDER BY total_revenue DESC
+LIMIT 3;
+-- Output: Top 3 products generating the highest revenue.
+
+-- 23. Region-wise sales summary (using customers + orders)
+SELECT c.region, SUM(p.price * o.quantity) AS total_sales
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+JOIN products p ON o.product_id = p.id
+GROUP BY c.region;
+-- Output: Sales totals grouped by customer region.
+
+-- 24. Full outer join simulation (customers + orders)
+SELECT c.name, o.id AS order_id
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+UNION
+SELECT c.name, o.id AS order_id
+FROM customers c
+RIGHT JOIN orders o ON c.id = o.customer_id;
+-- Output: All customers + all orders (like full outer join).
+
+-- 25. Find departments where avg salary > overall avg
+SELECT d.name, AVG(e.salary) AS dept_avg_salary
+FROM employees e
+JOIN departments d ON e.department_id = d.id
+GROUP BY d.name
+HAVING AVG(e.salary) > (SELECT AVG(salary) FROM employees);
+-- Output: Departments whose avg salary is above company avg.
+
